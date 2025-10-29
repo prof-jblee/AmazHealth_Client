@@ -78,6 +78,13 @@ AppService({
     appendStepRecord()
 
     timeSensor.onPerMinute(() => {
+
+      // 10분 간격으로 실행하기 위한 코드
+      const h = timeSensor.getHours()
+      const m = timeSensor.getMinutes()
+      const s = timeSensor.getSeconds()
+      logger.log(`${moduleName} time report: ${h}:${m}:${s}`)
+
       logger.log(
         `${moduleName} time report: ${timeSensor.getHours()}:${timeSensor.getMinutes()}:${timeSensor.getSeconds()}`
       ),
