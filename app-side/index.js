@@ -12,7 +12,7 @@ AppSideService(
           const ts = step_item.ts
           const step_count = step_item.step_count          
 
-          fetch(`https://269824b3a88d.ngrok-free.app/number?value=${step_count}&timestamp=${ts}`)
+          fetch(`http://127.0.0.1:3000/number?value=${step_count}&timestamp=${ts}`)
           .then((response) => {
             if(!response.ok) {
               throw new Error("서버 응답 오류")
