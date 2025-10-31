@@ -51,6 +51,8 @@
     "device:os.bg_service",
     "device:os.notification",
     "data:user.hd.step",    
+    "data:user.hd.heart_rate",
+    "data:user.hd.sleep",
     "device:os.local_storage"    
   ],
   "i18n": {

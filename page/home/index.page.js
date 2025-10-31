@@ -6,7 +6,7 @@ import { BasePage } from '@zeppos/zml/base-page'
 import * as appService from "@zos/app-service";
 import { queryPermission, requestPermission } from "@zos/app";
 import { replace } from "@zos/router";
-import { readFileSync } from '@zos/fs'
+import { readFileSync, writeFileSync } from '@zos/fs'
 
 import {
   TITLE_TEXT_STYLE,    
@@ -48,6 +48,33 @@ const logger = Logger.getLogger('todo-list-page')
 // 실행중인 서비스 목록 가져오기
 let services = appService.getAllAppServices();
 
+// 백그라운드 서비스가 실행 중인지 체크하는 함수
+function isServiceRunning() {           
+  services = appService.getAllAppServices()
+  return services.includes(serviceFile)
+}
+
+// 주기적으로 백그라운드 서비스가 실행 중인지 모니터링해주는 함수
+function startServiceWatchdog(vm) {
+  stopServiceWatchdog(vm) // 중복 방지
+  vm.state.watchdogTimer = setInterval(() => {
+    const running = isServiceRunning()
+    if (!running && vm.state.shouldKeepRunning) {
+      logger.log('[watchdog] service not running. restarting...')
+      // 권한 체크 포함해서 재시작
+      permissionRequest(vm)
+    }
+  }, 60000) // 60초마다 체크 (필요 시 조정)
+}
+
+// 백그라운드 서비스 모니터링 함수 종료
+function stopServiceWatchdog(vm) {
+  if (vm.state.watchdogTimer) {
+    clearInterval(vm.state.watchdogTimer)
+    vm.state.watchdogTimer = null
+  }
+}
+
 function permissionRequest(vm) {
   const [result2] = queryPermission({
     permissions,
@@ -69,6 +96,9 @@ function permissionRequest(vm) {
 
 function startTimeService(vm) {
   logger.log(`=== start service: ${serviceFile} ===`);
+
+  vm.state.shouldKeepRunning = true      // 실행 유지
+
   const result = appService.start({
     url: serviceFile,
     param: `service=${serviceFile}&action=start`,
@@ -76,20 +106,12 @@ function startTimeService(vm) {
     complete_func: (info) => {
       logger.log(`startService result: ` + JSON.stringify(info));
       hmUI.showToast({ text: `start result: ${info.result}` });
+      
       // refresh for button status
-
       if (info.result) {
         vm.state.running = true;
-        setProperty(
-          vm.state.txtLabel,
-          hmUI.prop.TEXT,
-          txtResource.label[vm.state.running]
-        );
-        setProperty(
-          vm.state.serviceBtn,
-          hmUI.prop.TEXT,
-          txtResource.btn[vm.state.running]
-        );
+        setProperty(vm.state.txtLabel, hmUI.prop.TEXT, txtResource.label[vm.state.running]);
+        setProperty(vm.state.serviceBtn, hmUI.prop.TEXT, txtResource.btn[vm.state.running]);
       }
     },
   });
@@ -102,6 +124,9 @@ function startTimeService(vm) {
 function stopTimeService(vm) {
   logger.log(`=== stop service: ${serviceFile} ===`);
 
+  vm.state.shouldKeepRunning = false     // 중지 유지
+  stopServiceWatchdog(vm)                // 감시 중단
+
   appService.stop({
     url: serviceFile,
     param: `service=${serviceFile}&action=stop`,
@@ -112,16 +137,8 @@ function stopTimeService(vm) {
 
       if (info.result) {
         vm.state.running = false;
-        setProperty(
-          vm.state.txtLabel,
-          hmUI.prop.TEXT,
-          txtResource.label[vm.state.running]
-        );
-        setProperty(
-          vm.state.serviceBtn,
-          hmUI.prop.TEXT,
-          txtResource.btn[vm.state.running]
-        );
+        setProperty(vm.state.txtLabel, hmUI.prop.TEXT, txtResource.label[vm.state.running]);
+        setProperty(vm.state.serviceBtn, hmUI.prop.TEXT, txtResource.btn[vm.state.running]);
       }
     },
   });  
@@ -135,6 +152,8 @@ Page(
       running: false,
       txtLabel: null,
       serviceBtn: null,
+      watchdogTimer: null,      // setInterval 핸들
+      shouldKeepRunning: false, // 자동 재시작 여부
     },
 
     onInit() {
@@ -145,7 +164,10 @@ Page(
       logger.debug('page build invoked')      
 
       const vm = this;
-      vm.state.running = services.includes(serviceFile);
+      vm.state.running = isServiceRunning()             // 상태 반영
+      vm.state.shouldKeepRunning = vm.state.running     // 이미 돌고 있으면 유지
+      if (vm.state.running) startServiceWatchdog(vm)    // 초기 진입 시 감시 시작
+
       logger.log("service status %s", vm.state.running);      
 
       // Show tips
@@ -187,16 +209,23 @@ Page(
     },
     onResume() {
       logger.log("page on resume invoke");
+
+      // 상태 재동기화
+      this.state.running = isServiceRunning()
+      // 사용자의 의도가 실행 유지라면 감시 재가동
+      if (this.state.shouldKeepRunning) startServiceWatchdog(this)
+
       replace({ url: `${thisFile}` });
     },    
     onDestroy() {
       logger.debug('page onDestroy invoked')
+
+      stopServiceWatchdog(this) // 메모리 누수 방지
     },    
   
     addSteps() {
 
-      try {
-        const ts = Date.now()
+      try {        
                 
         const step_file = readFileSync({ path: STEP_FILE, options: { encoding: 'utf8' } })        
         
@@ -211,12 +240,19 @@ Page(
             method: 'STEP_FILE',
             params: step_file
           })        
-            .then(({ result }) => {          
-              
-              // result 안에는 JSON 객체로 날짜와 Step이 저장
+            .then(({ result }) => {                        
+              // result 안에는 JSON 객체로 날짜와 다른 정보들이 저장
               console.log(JSON.stringify(result))          
+              
               hmUI.showToast({
                 text: '성공: ' + result
+              })
+
+              // 데이터 전송이 성공한 경우, 'STEP_FILE' 내용 비우기
+              writeFileSync({
+                path: STEP_FILE,
+                data: [],
+                options: { encoding: 'utf8' }
               })
             })
             .catch((res) => {

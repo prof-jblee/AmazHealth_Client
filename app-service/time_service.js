@@ -3,14 +3,17 @@ import { log } from "@zos/utils"
 import * as notificationMgr from "@zos/notification"
 import * as appServiceMgr from "@zos/app-service"
 import { Time } from "@zos/sensor";
-import { Step } from "@zos/sensor";
+import { Step, Screen, HeartRate, Sleep } from "@zos/sensor";
 import { readFileSync, writeFileSync } from '@zos/fs'
 
 const moduleName = "Time Service"
-const timeSensor = new Time()
-
 const STEP_FILE = 'steps.json'        // /data 하위에 저장됨(앱별 샌드박스)
+
+const timeSensor = new Time()
 const step = new Step()
+const screen = new Screen()
+const heartrate = new HeartRate()
+const sleep = new Sleep()
 
 const logger = log.getLogger("todo-list-page")
 
@@ -18,6 +21,9 @@ function appendStepRecord() {
 
   const ts = Date.now()
   const step_count = step.getCurrent()
+  const light = screen.getLight()
+  const heart_rate = heartrate.getCurrent()
+  const {score, deepTime, startTime, endTime, totalTime} = sleep.getInfo()
 
   // 1) 기존 파일 내용 읽기(없으면 빈 배열)
   let arr = []
@@ -30,8 +36,21 @@ function appendStepRecord() {
     arr = []
   }
 
+  // awake 시간 구하기  
+  const sleepStage = sleep.getStage()
+  let awake_length = 0
+  sleepStage.forEach((sleep_info) => {
+    const { model, start, stop } = sleep_info
+
+    if (model === sleep.getStageConstantObj().WAKE_STAGE) {
+      awake_length += (Number(stop) - Number(start))
+    }
+  })
+
+  const sleepLength = totalTime - awake_length    // 실제 수면 시간 구하기
+  
   // 2) 새 레코드 추가
-  arr.push({ ts, step_count })
+  arr.push({ ts, step_count, light, heart_rate, score, startTime, endTime, sleepLength, totalTime })
 
   // 3) 덮어쓰기 저장
   writeFileSync({
@@ -75,7 +94,10 @@ AppService({
   onInit(e) {
     logger.log(`service onInit(${e})`)
 
-    appendStepRecord()
+    // 심박수는 onCurrentChange 함수를 호출해야 내부적으로 기록됨
+    heartrate.onCurrentChange(() => { })
+
+    appendStepRecord()      // 처음에 한번 기록
 
     // 1분 간격으로 걸음 수 기록
     timeSensor.onPerMinute(() => {
