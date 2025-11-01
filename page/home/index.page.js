@@ -220,7 +220,8 @@ Page(
     onDestroy() {
       logger.debug('page onDestroy invoked')
 
-      stopServiceWatchdog(this) // 메모리 누수 방지
+      // 화면이 꺼지면 호출되기 때문에 이 함수를 호출하는 것이 맞을까 의심됨
+      // stopServiceWatchdog(this) // 메모리 누수 방지
     },    
   
     addSteps() {

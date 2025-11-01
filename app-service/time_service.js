@@ -102,21 +102,21 @@ AppService({
     // 1분 간격으로 걸음 수 기록
     timeSensor.onPerMinute(() => {
 
-      // // 10분 간격으로 실행하기 위한 코드
-      // const h = timeSensor.getHours()
-      // const m = timeSensor.getMinutes()
+      // 10분 간격으로 실행하기 위한 코드
+      const h = timeSensor.getHours()
+      const m = timeSensor.getMinutes()
       
-      // if (m % 10 === 0) {
-      //   logger.log(
-      //     `${moduleName} time report: ${timeSensor.getHours()}:${timeSensor.getMinutes()}:${timeSensor.getSeconds()}`
-      //   ),
-      //   appendStepRecord()
-      // }
+      if (m % 10 === 0) {
+        logger.log(
+          `${moduleName} time report: ${timeSensor.getHours()}:${timeSensor.getMinutes()}:${timeSensor.getSeconds()}`
+        ),
+        appendStepRecord()
+      }
 
-      logger.log(
-        `${moduleName} time report: ${timeSensor.getHours()}:${timeSensor.getMinutes()}:${timeSensor.getSeconds()}`
-      ),
-      appendStepRecord()
+      // logger.log(
+      //   `${moduleName} time report: ${timeSensor.getHours()}:${timeSensor.getMinutes()}:${timeSensor.getSeconds()}`
+      // ),
+      // appendStepRecord()
     })
 
     timeSensor.onPerDay(() => {
