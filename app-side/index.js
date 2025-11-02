@@ -5,7 +5,7 @@ AppSideService(
     onInit() {},
 
     onRequest(req, res) {
-      if(req.method === 'STEP_FILE') {
+      if(req.method === 'SEND_DATA') {
         const step_list = JSON.parse(req.params)
 
         for (const step_item of step_list) {
