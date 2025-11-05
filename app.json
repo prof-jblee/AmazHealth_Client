@@ -7,10 +7,10 @@
       "name": "1.0.0"
     },
     "appId": 26930,
-    "appName": "Todo List",
+    "appName": "AmazHealth",
     "icon": "icon.png",
-    "vender": "zepp",
-    "description": "todo list application"
+    "vender": "DHIL",
+    "description": "Sensor Data Collection App"
   },
   "runtime": {
     "apiVersion": {
@@ -57,7 +57,7 @@
   ],
   "i18n": {
     "en-US": {
-      "name": "Todo List"
+      "name": "AmazHealth"
     }
   },
   "defaultLanguage": "en-US",

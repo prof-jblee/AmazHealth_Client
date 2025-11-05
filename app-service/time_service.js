@@ -31,7 +31,7 @@ const hr_list = []                            // 분당 심박수를 누적하�
 const step_list = []                          // 분당 걸음수를 누적하기 위한 리스트
 const light_list = []                         // 분당 조도값을 누적하기 위한 리스트
 
-const logger = log.getLogger("todo-list-page")
+const logger = log.getLogger("AmazHealth-service")
 
 // 화면이 꺼져있을 때만 QUEUE에 있는 내용을 파일로 저장
 function flushSensorDataQueue() {
@@ -87,10 +87,10 @@ function flushSleepLogQueue() {
       isNotificationDelay = false
       notificationMgr.notify({
         title: "수면 로그 변화 관찰",
-        content: `현재 새로운 수면 로그가 관찰되었습니다. +키를 눌러 서버에 데이터를 전송하세요.`,
+        content: `현재 새로운 수면 로그가 관찰되었습니다. 메인 화면으로 가서 데이터를 전송하세요.`,
         actions: [
           {
-            text: "Home Page",
+            text: "메인 화면",
             file: "page/home/index.page",
           },
         ],

@@ -17,7 +17,7 @@ import {
 const permissions = ["device:os.bg_service"];     // 백그라운드 서비스 
 let services = appService.getAllAppServices();    // 실행중인 서비스 목록 가져오기
 
-const logger = Logger.getLogger('todo-list-page')
+const logger = Logger.getLogger('AmazHealth-page')
 
 const serviceFile = "app-service/time_service";   // time_service 폴더 지정
 let thisFile = "page/home/index.page";            // 현재 파일 경로
@@ -26,12 +26,12 @@ const SENSOR_FILE = 'sensor_data.json'            // /data 하위에 저장됨(�
 
 const txtResource = {
   label: {
-    true: "Click button to stop service!",
-    false: "Click button to start service!",
+    true: "서비스를 멈추려면 버튼을 클릭하세요!",
+    false: "서비스를 시작하려면 버튼을 클릭하세요!",
   },
   btn: {
-    true: "Stop Service",
-    false: "Start Service",
+    true: "서비스 정지",
+    false: "서비스 시작",
   },
 };
 
@@ -164,7 +164,7 @@ Page(
       // Show tips
       hmUI.createWidget(hmUI.widget.TEXT, {
         ...SERVICE_TEXT,
-        text: "Time report service:\nsend a notification every minute!",
+        text: "센서 데이터 수집 서비스",
       });
 
       vm.state.txtLabel = hmUI.createWidget(hmUI.widget.TEXT, {
