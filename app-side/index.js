@@ -6,23 +6,17 @@ AppSideService(
 
     onRequest(req, res) {
       if(req.method === 'SEND_DATA') {
-        const step_list = JSON.parse(req.params)
+        // [수정] 변수 하나하나 꺼내지 말고, 받은 내용 통째로 보냅니다.
+        const jsonBody = req.params 
 
-        for (const step_item of step_list) {
-          const ts = step_item.ts
-          const step_count = step_item.step_count       
-          const light = step_item.light   
-          const heartrate = step_item.heart_rate
-          const score = step_item.score          
-          const startTime = step_item.startTime
-          const endTime = step_item.endTime
-          const sleepLength = step_item.sleepLength
-          const totalTime = step_item.totalTime
-
-          fetch(`https://aplitic-fully-alisa.ngrok-free.dev/number?timestamp=${ts}
-                &step_count=${step_count}&light=${light}&heartrate=${heartrate}
-                &score=${score}&startTime=${startTime}&endTime=${endTime}
-                &sleepLength=${sleepLength}&totalTime=${totalTime}`)
+        // [수정] GET 대신 PATCH + Body 사용
+        fetch('http://127.0.0.1:3000/steps', { 
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonBody
+        })
           .then((response) => {
             if(!response.ok) {
               throw new Error("서버 응답 오류")
@@ -30,14 +24,13 @@ AppSideService(
             return response.json()
           })
           .then((data) => {
-            console.log("서버 응답:" + data)
+            console.log("서버 응답:" + JSON.stringify(data))
             res(null, {result: data})
           })
           .catch((error) => {
             console.error("요청 실패:", error)
             res(null, {result: error})
           })        
-        }        
       }
     },   
     onRun() {},
