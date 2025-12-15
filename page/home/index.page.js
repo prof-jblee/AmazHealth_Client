@@ -14,7 +14,13 @@ import {
   SERVICE_BTN
 } from 'zosLoader:./index.page.[pf].layout.js'
 
-const permissions = ["device:os.bg_service"];     // 백그라운드 서비스 
+// (*) 수정: 센서 접근 권한 추가 (HeartRate, Sleep)
+const permissions = [
+  "device:os.bg_service",
+  "data:os.sensor.heart_rate",
+  "data:os.sensor.sleep"
+];
+
 let services = appService.getAllAppServices();    // 실행중인 서비스 목록 가져오기
 
 const logger = Logger.getLogger('AmazHealth-page')
@@ -22,7 +28,8 @@ const logger = Logger.getLogger('AmazHealth-page')
 const serviceFile = "app-service/time_service";   // time_service 폴더 지정
 let thisFile = "page/home/index.page";            // 현재 파일 경로
 
-const SENSOR_FILE = 'sensor_data.json'            // /data 하위에 저장됨(앱별 샌드박스)
+const SENSOR_FILE = 'sensor_data.json'            // 센서 데이터 파일
+const SLEEP_FILE = 'sleep_data.json'              // (*) 추가: 수면 데이터 파일
 
 const txtResource = {
   label: {
@@ -164,7 +171,7 @@ Page(
       // Show tips
       hmUI.createWidget(hmUI.widget.TEXT, {
         ...SERVICE_TEXT,
-        text: "센서 데이터 수집 서비스",
+        text: "센서 및 수면 데이터 수집",
       });
 
       vm.state.txtLabel = hmUI.createWidget(hmUI.widget.TEXT, {
@@ -210,57 +217,81 @@ Page(
     },    
     onDestroy() {
       logger.debug('Page onDestroy invoked')
-
-      // 화면이 꺼지면 호출되기 때문에 이 함수를 호출하는 것이 맞을까 의심됨
-      // stopServiceWatchdog(this) // 메모리 누수 방지
     },    
   
     // App-side로 저장된 파일 내용을 보내서 서버에 Request 하기
     RequestServer() {
 
-      try {        
-                
-        const sensor_file = readFileSync({ path: SENSOR_FILE, options: { encoding: 'utf8' } })        
-        
-        if (!sensor_file) {
-          hmUI.showToast({
-            text: '지금은 서버에 전송할 Step 파일이 없습니다.'
-          })
-          console.log('[Device App.] 지금은 업데이트 할 파일이 없습니다.')
-        } else {
-
-          this.request({
-            method: 'SEND_DATA',
-            params: sensor_file
-          })        
-            .then(({ result }) => {                        
-              // result 안에는 JSON 객체로 날짜와 다른 정보들이 저장
-              console.log(JSON.stringify(result))          
-              
-              hmUI.showToast({
-                text: '성공: ' + result
-              })
-
-              // 데이터 전송이 성공한 경우, 'SENSOR_FILE' 내용 비우기
-              writeFileSync({
-                path: SENSOR_FILE,
-                data: [],
-                options: { encoding: 'utf8' }
-              })
-            })
-            .catch((res) => {
-              console.log('실패!!')
-              hmUI.showToast({
-                text: '실패: ' + result
-              })
-            })    
+      try {
+        // (*) 1. 센서 데이터 읽기
+        let sensorList = []
+        try {
+          const sensorText = readFileSync({ path: SENSOR_FILE, options: { encoding: 'utf8' } })
+          if (sensorText) sensorList = JSON.parse(sensorText)
+        } catch (e) {
+          console.log('센서 데이터 파일 없음 또는 읽기 실패')
         }
+
+        // (*) 2. 수면 데이터 읽기
+        let sleepList = []
+        try {
+          const sleepText = readFileSync({ path: SLEEP_FILE, options: { encoding: 'utf8' } })
+          if (sleepText) sleepList = JSON.parse(sleepText)
+        } catch (e) {
+          console.log('수면 데이터 파일 없음 또는 읽기 실패')
+        }
+        
+        // 데이터가 둘 다 없으면 중단
+        if (sensorList.length === 0 && sleepList.length === 0) {
+          hmUI.showToast({
+            text: '전송할 데이터가 없습니다.'
+          })
+          console.log('[Device App.] 전송할 데이터가 없습니다.')
+          return
+        }
+
+        // (*) 3. 두 리스트를 합침 (센서 + 수면)
+        const finalData = sensorList.concat(sleepList)
+
+        this.request({
+          method: 'SEND_DATA',
+          params: JSON.stringify(finalData) // (*) 합친 배열을 문자열로 전송
+        })        
+          .then(({ result }) => {                        
+            console.log('전송 결과: ' + JSON.stringify(result))          
+            
+            hmUI.showToast({
+              text: '전송 성공'
+            })
+
+            // (*) 4. 전송 성공 시, 센서/수면 파일 모두 비우기 (초기화)
+            // 빈 배열 '[]'을 문자열로 저장
+            writeFileSync({
+              path: SENSOR_FILE,
+              data: JSON.stringify([]), 
+              options: { encoding: 'utf8' }
+            })
+            
+            writeFileSync({
+              path: SLEEP_FILE,
+              data: JSON.stringify([]),
+              options: { encoding: 'utf8' }
+            })
+            
+            console.log('[Device App.] 파일 데이터 초기화 완료')
+          })
+          .catch((res) => {
+            console.log('전송 실패!!', res)
+            hmUI.showToast({
+              text: '전송 실패'
+            })
+          })    
 
       } catch (e) {
         hmUI.showToast({
-          text: '센서 데이터 전송 실패:' + e
+          text: '데이터 처리 오류:' + e
         })
-        console.error('[Device App.] 센서 데이터 전송 실패:', e)
+        console.error('[Device App.] 데이터 처리 오류:', e)
       }
     },      
   })
