@@ -10,7 +10,7 @@
     "appName": "AmazHealth",
     "icon": "icon.png",
     "vender": "DHIL",
-    "description": "Sensor Data Collection App"
+    "description": "Sensor data sync app in local stoarage of smartphone"
   },
   "runtime": {
     "apiVersion": {
@@ -53,7 +53,7 @@
     "data:user.hd.step",    
     "data:user.hd.heart_rate",
     "data:user.hd.sleep",
-    "device:os.local_storage"    
+    "device:os.local_storage"      
   ],
   "i18n": {
     "en-US": {
