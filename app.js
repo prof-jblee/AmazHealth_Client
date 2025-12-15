@@ -1,7 +1,7 @@
 import { BaseApp } from '@zeppos/zml/base-app'
 import { log as Logger } from '@zos/utils'
 
-const logger = Logger.getLogger('todo-list-app')
+const logger = Logger.getLogger('AmazHealth')
 
 App(
   BaseApp({
